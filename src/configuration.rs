@@ -469,7 +469,7 @@ fn post_process(config_file: &Path, json: json::Config) -> Result<Config, Box<Er
     let rust_edition: RustEdition = {
         let mut buf = config_file.to_path_buf();
         buf.pop();
-        buf.push("Cargo.toml");
+        buf.push("rust/Cargo.toml");
         let manifest: toml::Value = fs::read_to_string(&buf)?.parse()?;
         manifest["package"]
             .get("edition")

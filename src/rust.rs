@@ -1353,7 +1353,7 @@ fn write_rust_implementation_object(r: &mut Vec<u8>, o: &Object) -> Result<()> {
         "        }}
     }}
     fn emit(&mut self) -> &mut {}Emitter {{
-        &self.emit
+        &mut self.emit
     }}",
         o.name
     )?;

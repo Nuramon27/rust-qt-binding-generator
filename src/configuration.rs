@@ -55,6 +55,8 @@ mod json {
         pub rust_by_function: bool,
         #[serde(default = "false_bool")]
         pub write: bool,
+        #[serde(rename = "rustByValue", default = "false_bool")]
+        pub rust_by_value: bool,
     }
 }
 
@@ -156,6 +158,7 @@ pub struct Property {
     pub property_type: Type,
     pub rust_by_function: bool,
     pub write: bool,
+    pub rust_by_value: bool,
 }
 
 impl PropertyPrivate for Property {
@@ -437,6 +440,7 @@ fn post_process_property(
         optional: a.1.optional,
         rust_by_function: a.1.rust_by_function,
         write: a.1.write,
+        rust_by_value: a.1.rust_by_value,
     })
 }
 

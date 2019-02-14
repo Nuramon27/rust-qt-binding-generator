@@ -21,17 +21,23 @@ fn rust_type_(p: &ItemProperty) -> String {
 
 fn rust_return_type(p: &Property) -> String {
     let mut type_: String = p.property_type.rust_type().to_string();
-    if type_ == "String" {
-        type_ = "str".to_string();
-    }
-    if type_ == "Vec<u8>" {
-        type_ = "[u8]".to_string();
-    }
-    if p.property_type.is_complex() {
-        type_ = "&".to_string() + &type_;
-    }
-    if p.optional {
-        return "Option<".to_string() + &type_ + ">";
+    if p.rust_by_value {
+        assert!(!p.property_type.is_object(), 
+                "Only simple types (String, Vec<u8>, quint32 … may be returned by value!");
+        type_ = p.property_type.rust_type().to_string();
+    } else {
+        if type_ == "String" {
+            type_ = "str".to_string();
+        }
+        if type_ == "Vec<u8>" {
+            type_ = "[u8]".to_string();
+        }
+        if p.property_type.is_complex() {
+            type_ = "&".to_string() + &type_;
+        }
+        if p.optional {
+            return "Option<".to_string() + &type_ + ">";
+        }
     }
     type_
 }

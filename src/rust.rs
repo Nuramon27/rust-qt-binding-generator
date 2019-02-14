@@ -1392,11 +1392,15 @@ fn write_rust_implementation_object(r: &mut Vec<u8>, o: &Object) -> Result<()> {
         } else {
             writeln!(r, "    fn {}(&self) -> {} {{", lc, rust_return_type(p))?;
             if p.is_complex() {
-                if p.optional {
-                    writeln!(r, "        self.{}.as_ref().map(|p| &p[..])", lc)?;
+                if p.rust_by_value {
+                    writeln!(r, "        self.{}.clone()", lc)?;
                 } else {
-                    writeln!(r, "        &self.{}", lc)?;
-                }
+                    if p.optional {
+                        writeln!(r, "        self.{}.as_ref().map(|p| &p[..])", lc)?;
+                    } else {
+                        writeln!(r, "        &self.{}", lc)?;
+                    }
+                } 
             } else {
                 writeln!(r, "        self.{}", lc)?;
             }

@@ -21,17 +21,23 @@ fn rust_type_(p: &ItemProperty) -> String {
 
 fn rust_return_type(p: &Property) -> String {
     let mut type_: String = p.property_type.rust_type().to_string();
-    if type_ == "String" {
-        type_ = "str".to_string();
-    }
-    if type_ == "Vec<u8>" {
-        type_ = "[u8]".to_string();
-    }
-    if p.property_type.is_complex() {
-        type_ = "&".to_string() + &type_;
-    }
-    if p.optional {
-        return "Option<".to_string() + &type_ + ">";
+    if p.rust_by_value {
+        assert!(!p.property_type.is_object(), 
+                "Only simple types (String, Vec<u8>, quint32 … may be returned by value!");
+        type_ = p.property_type.rust_type().to_string();
+    } else {
+        if type_ == "String" {
+            type_ = "str".to_string();
+        }
+        if type_ == "Vec<u8>" {
+            type_ = "[u8]".to_string();
+        }
+        if p.property_type.is_complex() {
+            type_ = "&".to_string() + &type_;
+        }
+        if p.optional {
+            return "Option<".to_string() + &type_ + ">";
+        }
     }
     type_
 }
@@ -597,14 +603,14 @@ pub trait {}Trait {{
                     } else {
                         writeln!(
                             r,
-                            "    fn set_{}(&mut self, index: usize, &[u8]) -> bool;",
+                            "    fn set_{}(&mut self, index: usize, _: &[u8]) -> bool;",
                             name
                         )?;
                     }
                 } else {
                     writeln!(
                         r,
-                        "    fn set_{}(&mut self, index: usize, {}) -> bool;",
+                        "    fn set_{}(&mut self, index: usize, _: {}) -> bool;",
                         name,
                         rust_type_(ip)
                     )?;
@@ -1386,11 +1392,15 @@ fn write_rust_implementation_object(r: &mut Vec<u8>, o: &Object) -> Result<()> {
         } else {
             writeln!(r, "    fn {}(&self) -> {} {{", lc, rust_return_type(p))?;
             if p.is_complex() {
-                if p.optional {
-                    writeln!(r, "        self.{}.as_ref().map(|p| &p[..])", lc)?;
+                if p.rust_by_value {
+                    writeln!(r, "        self.{}.clone()", lc)?;
                 } else {
-                    writeln!(r, "        &self.{}", lc)?;
-                }
+                    if p.optional {
+                        writeln!(r, "        self.{}.as_ref().map(|p| &p[..])", lc)?;
+                    } else {
+                        writeln!(r, "        &self.{}", lc)?;
+                    }
+                } 
             } else {
                 writeln!(r, "        self.{}", lc)?;
             }

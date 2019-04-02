@@ -141,8 +141,10 @@ private:"
     }
     writeln!(
         h,
-        "    Private * m_d;
-    bool m_ownsPrivate;"
+        "public:
+    Private * m_d;
+    bool m_ownsPrivate;
+private:"
     )?;
     for (name, p) in &o.properties {
         let mut t = if p.optional && !p.is_complex() {

@@ -194,7 +194,7 @@ pub enum ObjectType {
     Tree,
 }
 
-#[derive(Deserialize, Clone, Copy, PartialEq)]
+#[derive(Debug, Deserialize, Clone, Copy, PartialEq)]
 pub enum SimpleType {
     QString,
     QByteArray,
@@ -222,6 +222,19 @@ pub enum SimpleType {
     QUint32,
     #[serde(rename = "quint64")]
     QUint64,
+    #[serde(rename = "quintptr")]
+    QUintptr,
+    #[serde(rename = "qintptr")]
+    Qintptr,
+    QDate,
+    QTime,
+    QDateTime,
+    QSize,
+    QSizeF,
+    QPoint,
+    QPointF,
+    QRect,
+    QRectF,
 }
 
 impl SimpleTypePrivate for SimpleType {
@@ -241,6 +254,17 @@ impl SimpleTypePrivate for SimpleType {
             SimpleType::QUint16 => "quint16",
             SimpleType::QUint32 => "quint32",
             SimpleType::QUint64 => "quint64",
+            SimpleType::QUintptr => "quintptr",
+            SimpleType::Qintptr => "qintptr",
+            SimpleType::QDate => "QDate",
+            SimpleType::QTime => "QTime",
+            SimpleType::QDateTime => "QDateTime",
+            SimpleType::QSize => "QSize",
+            SimpleType::QSizeF => "QSizeF",
+            SimpleType::QPoint => "QPoint",
+            SimpleType::QPointF => "QPointF",
+            SimpleType::QRect => "QRect",
+            SimpleType::QRectF => "QRectF",
         }
     }
     fn cpp_set_type(&self) -> &str {
@@ -273,6 +297,15 @@ impl SimpleTypePrivate for SimpleType {
             SimpleType::QUint16 => "u16",
             SimpleType::QUint32 => "u32",
             SimpleType::QUint64 => "u64",
+            SimpleType::QUintptr => "uintptr_t",
+            SimpleType::Qintptr => "intptr_t",
+            SimpleType::QDate => "NaiveDate",
+            SimpleType::QTime => "NaiveTime",
+            SimpleType::QDateTime => "NaiveDateTime",
+            SimpleType::QSize | SimpleType::QPoint => "(c_int, c_int)",
+            SimpleType::QSizeF | SimpleType::QPointF => "(c_float, c_float)",
+            SimpleType::QRect => "(c_int, c_int, c_int, c_int)",
+            SimpleType::QRectF => "(c_float, c_float, c_float, c_float)",
         }
     }
     fn rust_type_init(&self) -> &str {
@@ -282,11 +315,46 @@ impl SimpleTypePrivate for SimpleType {
             SimpleType::Bool => "false",
             SimpleType::Float | SimpleType::Double => "0.0",
             SimpleType::Void => "()",
+            SimpleType::QDate => "Utc::ymd(2000, 1, 1)",
+            SimpleType::QTime => "NaiveTime::from_hms(0, 0, 0)",
+            SimpleType::QDateTime => "Utc::ymd(2000, 1, 1).and_hms(0, 0, 0)",
+            SimpleType::QSize | SimpleType::QPoint => "(0, 0)",
+            SimpleType::QSizeF | SimpleType::QPointF => "(0.0, 0.0)",
+            SimpleType::QRect => "(0, 0, 0, 0)",
+            SimpleType::QRectF => "(0.0, 0.0, 0.0, 0.0)",
             _ => "0",
         }
     }
     fn is_complex(&self) -> bool {
-        self == &SimpleType::QString || self == &SimpleType::QByteArray
+        match self {
+            SimpleType::QString | SimpleType::QByteArray |
+            SimpleType::QDate | SimpleType::QTime | SimpleType::QDateTime |
+            SimpleType::QPoint | SimpleType::QPointF |
+            SimpleType::QSize | SimpleType::QSizeF |
+            SimpleType::QRect | SimpleType::QRectF => true,
+            _ => false
+
+        }
+    }
+    /// Returns whether the type has a slice representation,
+    /// that can be obtained by writing &_[..].
+    ///
+    /// These are `SimpleType::QString` and `SimpleType::QByteArray`.
+    fn is_slicable(&self) -> bool {
+        match self {
+            SimpleType::QString | SimpleType::QByteArray => true,
+            _ => false,
+        }
+    }
+    /// Returns whether the type implements `Copy`.
+    ///
+    /// This is true for all types but `SimpleType::QString`
+    /// and `SimpleType::QByteArray`.
+    fn is_copy(&self) -> bool {
+        match self {
+            SimpleType::QString | SimpleType::QByteArray => false,
+            _ => true,
+        }
     }
 }
 

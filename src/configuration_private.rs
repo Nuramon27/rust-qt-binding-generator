@@ -38,6 +38,16 @@ pub trait SimpleTypePrivate {
     fn rust_type(&self) -> &str;
     fn rust_type_init(&self) -> &str;
     fn is_complex(&self) -> bool;
+    /// Returns whether the type has a slice representation,
+    /// that can be obtained by writing &_[..].
+    ///
+    /// These are `SimpleType::QString` and `SimpleType::QByteArray`.
+    fn is_slicable(&self) -> bool;
+    /// Returns whether the type implements `Copy`.
+    ///
+    /// This is true for all types but `SimpleType::QString`
+    /// and `SimpleType::QByteArray`.
+    fn is_copy(&self) -> bool;
 }
 
 pub trait ItemPropertyPrivate {

@@ -240,28 +240,95 @@ pub unsafe extern \"C\" fn {}_{}(ptr: *{} {}",
     // variable that will be set to the argument list. Also add a setter
     // function.
     if f.return_type.is_complex() {
-        writeln!(
-            r,
-            ", d: *mut {}, set: fn(*mut {0}, str: *const c_char, len: c_int)) {{",
-            f.return_type.name()
-        )?;
+        match f.return_type {
+            SimpleType::QString | SimpleType::QByteArray => writeln!(
+                r,
+                ", d: *mut {}, set: fn(*mut {0}, str: *const c_char, len: c_int)) {{",
+                f.return_type.name()
+            )?,
+            SimpleType::QPoint | SimpleType::QSize => writeln!(
+                r,
+                ", d: *mut {}, set: fn(*mut {0}, x: c_int, y: c_int)) {{",
+                f.return_type.name()
+            )?,
+            SimpleType::QPointF | SimpleType::QSizeF => writeln!(
+                r,
+                ", d: *mut {}, set: fn(*mut {0}, x: c_float, y: c_float)) {{",
+                f.return_type.name()
+            )?,
+            SimpleType::QRect => writeln!(
+                r,
+                ", d: *mut {}, set: fn(*mut {0}, x: c_int, y: c_int, w: c_int, h: c_int)) {{",
+                f.return_type.name()
+            )?,
+            SimpleType::QRectF => writeln!(
+                r,
+                ", d: *mut {}, set: fn(*mut {0}, x: c_float, y: c_float, w: c_float, h: c_float)) {{",
+                f.return_type.name()
+            )?,
+            SimpleType::QDate => writeln!(
+                r,
+                ", d: *mut {}, set: fn(*mut {0}, y: c_int, m: c_int, d: c_int)) {{",
+                f.return_type.name()
+            )?,
+            SimpleType::QTime => writeln!(
+                r,
+                ", d: *mut {}, set: fn(*mut {0}, h: c_int, m: c_int, s: c_int)) {{",
+                f.return_type.name()
+            )?,
+            SimpleType::QDateTime => writeln!(
+                r,
+                ", d: *mut {}, set: fn(*mut {0}, year: c_int, month: c_int, day: c_int, hour: c_int, minute: c_int, second: c_int)) {{",
+                f.return_type.name()
+            )?,
+            x => unreachable!("Forgotten variant {:?} of SimpleType", x),
+        };
     } else {
         writeln!(r, ") -> {} {{", f.return_type.rust_type())?;
     }
     for a in &f.arguments {
-        if a.argument_type.name() == "QString" {
-            writeln!(
+        match a.argument_type {
+            SimpleType::QString => writeln!(
                 r,
-                "    let mut {} = String::new();
+                "    let mut {0} = String::new();
     set_string_from_utf16(&mut {0}, {0}_str, {0}_len);",
                 a.name
-            )?;
-        } else if a.argument_type.name() == "QByteArray" {
-            writeln!(
+            )?,
+            SimpleType::QByteArray => writeln!(
                 r,
-                "    let {} = {{ slice::from_raw_parts({0}_str as *const u8, to_usize({0}_len)) }};",
+                "    let {0} = {{ slice::from_raw_parts({0}_str as *const u8, to_usize({0}_len)) }};",
                 a.name
-            )?;
+            )?,
+            SimpleType::QPoint | SimpleType::QPointF |
+            SimpleType::QSize | SimpleType::QSizeF => writeln!(
+                r,
+                "    let {} = (x, y);",
+                a.name
+            )?,
+            SimpleType::QRect | SimpleType::QRectF => writeln!(
+                r,
+                "    let {} = (x, y, w, h);",
+                a.name
+            )?,
+            SimpleType::QDate => writeln!(
+                r,
+                "    let {} = NaiveDate::from_ymd(y, m, d);",
+                a.name
+            )?,
+            SimpleType::QTime => writeln!(
+                r,
+                "    let {} = NaiveTime::from_hms(h, m, s);",
+                a.name
+            )?,
+            SimpleType::QDateTime => writeln!(
+                r,
+                "    let {} = NaiveDateTime::new(
+        NaiveDate::from_ymd(year, month, day),
+        NaiveTime::from_hms(hour, minute, second);
+    )",
+                a.name
+            )?,
+            _ => (),
         }
     }
     if f.mutable {
@@ -278,11 +345,24 @@ pub unsafe extern \"C\" fn {}_{}(ptr: *{} {}",
     }
     writeln!(r, ");")?;
     if f.return_type.is_complex() {
-        writeln!(
-            r,
-            "    let s: *const c_char = r.as_ptr() as (*const c_char);
+        match f.return_type {
+            SimpleType::QString | SimpleType::QByteArray => writeln!(
+                r,
+                "    let s: *const c_char = r.as_ptr() as (*const c_char);
     set(d, s, r.len() as i32);"
-        )?;
+            )?,
+            SimpleType::QPoint | SimpleType::QSize |
+            SimpleType::QPointF | SimpleType::QSizeF => writeln!(
+                r,
+                "set(d, r.0, r.1);"
+            )?,
+            SimpleType::QRect | SimpleType::QRectF => writeln!(
+                r,
+                "set(d, r.0, r.1, r.2, r.3);"
+            )?,
+            _ => unreachable!("Forgotten variant of SimpleType"),
+        }
+
     } else {
         writeln!(r, "    r")?;
     }
@@ -1258,15 +1338,28 @@ pub fn write_interface(conf: &Config) -> Result<()> {
     writeln!(
         r,
         "/* generated by rust_qt_binding_generator */
-use libc::{{c_char, c_ushort, c_int}};
+use libc::{{c_char, c_ushort, c_int, c_float, uintptr_t, intptr_t}};
 use std::slice;
 use std::char::decode_utf16;
 
 use std::sync::Arc;
 use std::sync::atomic::{{AtomicPtr, Ordering}};
-use std::ptr::null;
+use std::ptr::null;"
+    )?;
 
-use {}{}::*;",
+    if conf.types().contains("QDate") {
+        writeln!(r, "use chrono::naive::NaiveDate;")?;
+    }
+    if conf.types().contains("QTime") {
+        writeln!(r, "use chrono::naive::NaiveTime;")?;
+    }
+    if conf.types().contains("QDateTime") {
+        writeln!(r, "use chrono::naive::NaiveDateTime;")?;
+    }
+
+    writeln!(
+        r,
+        "use {}{}::*;",
         get_module_prefix(conf),
         conf.rust.implementation_module
     )?;
@@ -1516,6 +1609,17 @@ pub fn write_implementation(conf: &Config) -> Result<()> {
         return Ok(());
     }
     let mut r = Vec::new();
+
+    if conf.types().contains("QDate") {
+        writeln!(r, "use chrono::naive::NaiveDate;")?;
+    }
+    if conf.types().contains("QTime") {
+        writeln!(r, "use chrono::naive::NaiveTime;")?;
+    }
+    if conf.types().contains("QDateTime") {
+        writeln!(r, "use chrono::naive::NaiveDateTime;")?;
+    }
+
     writeln!(
         r,
         "#![allow(unused_imports)]

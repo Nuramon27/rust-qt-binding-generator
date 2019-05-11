@@ -242,8 +242,19 @@ fn write_function_c_decl(
     // write all the input arguments, for QString and QByteArray, write
     // pointers to their content and the length
     for a in &f.arguments {
+        match a.argument_type {
+            SimpleType::QString => write!(w, ", const ushort*, int")?,
+            SimpleType::QByteArray => write!(w, ", const char*, int")?,
+            SimpleType::QPoint | SimpleType::QSize => write!(w, ", int, int")?,
+            SimpleType::QPointF | SimpleType::QSizeF => write!(w, ", float, float")?,
+            SimpleType::QRect => write!(w, ", int, int, int, int")?,
+            SimpleType::QRectF => write!(w, ", float, float, float, float")?,
+            SimpleType::QDate | SimpleType::QTime => write!(w, ", int, int, int")?,
+            SimpleType::QDateTime => write!(w, ", int, int, int, int, int, int")?,
+            _ => write!(w, ", {}", a.type_name())?,
+        }
         if a.type_name() == "QString" {
-            write!(w, ", const ushort*, int")?;
+            ;
         } else if a.type_name() == "QByteArray" {
             write!(w, ", const char*, int")?;
         } else {
@@ -253,11 +264,20 @@ fn write_function_c_decl(
     // If the return type is QString or QByteArray, append a pointer to the
     // variable that will be set to the argument list. Also add a setter
     // function.
-    if f.return_type.name() == "QString" {
-        write!(w, ", QString*, qstring_set")?;
-    } else if f.return_type.name() == "QByteArray" {
-        write!(w, ", QByteArray*, qbytearray_set")?;
-    }
+    match f.return_type {
+        SimpleType::QString => write!(w, ", QString*, qstring_set")?,
+        SimpleType::QByteArray => write!(w, ", QByteArray*, qbytearray_set")?,
+        SimpleType::QPoint => write!(w, ", QPoint*, qpoint_set")?,
+        SimpleType::QPointF => write!(w, ", QPointF*, qpointf_set")?,
+        SimpleType::QSize => write!(w, ", QSize*, qsize_set")?,
+        SimpleType::QSizeF => write!(w, ", QPoint*, qsizef_set")?,
+        SimpleType::QRect => write!(w, ", QRect*, qrect_set")?,
+        SimpleType::QRectF => write!(w, ", QRectF*, qrectf_set")?,
+        SimpleType::QDate => write!(w, ", QDate*, qdate_set")?,
+        SimpleType::QTime => write!(w, ", QTime*, qtime_set")?,
+        SimpleType::QDateTime => write!(w, ", QQDateTime*, qdatetime_set")?,
+        _ => (),
+    };
     writeln!(w, ");")?;
     Ok(())
 }
@@ -1469,6 +1489,65 @@ namespace {{",
             v->append(bytes, nbytes);
         }}
     }}"
+        )?;
+    }
+    for &typename in ["QSize", "QSizeF", "QPoint", "QPointF"].iter() {
+        if conf.types().contains(typename) {
+            writeln!(
+                w,
+                "
+    typedef void (*{1}_set)({0}* val, {2} x, {2} y);
+    void set_{1}({0}* val, {2} x, {2} y) {{
+        *val = {0}(x, y);
+    }}",
+                typename, typename.to_lowercase(), if typename.ends_with('F') { "float" } else { "int" }
+            )?;
+        }
+    }
+    for &typename in ["QRect, QRectF"].iter() {
+        if conf.types().contains(typename) {
+            writeln!(
+                w,
+                "
+    typedef void (*{1}_set)({0}* val, {2} x, {2} y, {2} w, {2} h);
+    void set_{1}({0}* val, {2} x, {2} y, {2} w, {2} h) {{
+        *val = {0}(x, y, w, h);
+    }}",
+                typename, typename.to_lowercase(), if typename.ends_with('F') { "float" } else { "int" }
+            )?;
+        }
+    }
+    if conf.types().contains("QDate") {
+        writeln!(
+            w,
+            "
+    typedef void (*{1}_set)({0}* val, int y, int m, int d);
+    void set_{1}({0}* val, int y, int m, int d) {{
+        *val = {0}(y, m, d);
+    }}",
+            "QDate", "QDate".to_lowercase()
+        )?;
+    }
+    if conf.types().contains("QTime") {
+        writeln!(
+            w,
+            "
+    typedef void (*{1}_set)({0}* val, int h, int m, int s);
+    void set_{1}({0}* val, int h, int m, int s) {{
+        *val = {0}(h, m, s);
+    }}",
+            "QTime", "QTime".to_lowercase()
+        )?;
+    }
+    if conf.types().contains("QDateTime") {
+        writeln!(
+            w,
+            "
+    typedef void (*{1}_set)({0}* val, int year, int month, int day, int hour, int minute, int second);
+    void set_{1}({0}* val, int year, int month, int day, int hour, int minute, int second) {{
+        *val = {0}(h, m, s);
+    }}",
+            "QDateTime", "QDateTime".to_lowercase()
         )?;
     }
     if conf.has_list_or_tree() {

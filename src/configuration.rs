@@ -165,6 +165,12 @@ impl PropertyPrivate for Property {
     fn is_complex(&self) -> bool {
         self.property_type.is_complex()
     }
+    fn is_sliceable(&self) -> bool {
+        self.property_type.is_sliceable()
+    }
+    fn is_copy(&self) -> bool {
+        self.property_type.is_copy()
+    }
     fn c_get_type(&self) -> String {
         let name = self.property_type.name();
         name.to_string() + "*, " + &name.to_lowercase() + "_set"
@@ -340,7 +346,7 @@ impl SimpleTypePrivate for SimpleType {
     /// that can be obtained by writing &_[..].
     ///
     /// These are `SimpleType::QString` and `SimpleType::QByteArray`.
-    fn is_slicable(&self) -> bool {
+    fn is_sliceable(&self) -> bool {
         match self {
             SimpleType::QString | SimpleType::QByteArray => true,
             _ => false,
@@ -374,6 +380,18 @@ impl TypePrivate for Type {
     fn is_complex(&self) -> bool {
         match self {
             Type::Simple(simple) => simple.is_complex(),
+            _ => false,
+        }
+    }
+    fn is_sliceable(&self) -> bool {
+        match self {
+            Type::Simple(simple) => simple.is_sliceable(),
+            _ => false,
+        }
+    }
+    fn is_copy(&self) -> bool {
+        match self {
+            Type::Simple(simple) => simple.is_copy(),
             _ => false,
         }
     }
@@ -433,6 +451,12 @@ impl TypeName for ItemProperty {
 impl ItemPropertyPrivate for ItemProperty {
     fn is_complex(&self) -> bool {
         self.item_property_type.is_complex()
+    }
+    fn is_sliceable(&self) -> bool {
+        self.item_property_type.is_sliceable()
+    }
+    fn is_copy(&self) -> bool {
+        self.item_property_type.is_copy()
     }
     fn cpp_set_type(&self) -> String {
         let t = self.item_property_type.cpp_set_type().to_string();

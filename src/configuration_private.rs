@@ -18,6 +18,16 @@ pub trait TypeName {
 pub trait TypePrivate {
     fn is_object(&self) -> bool;
     fn is_complex(&self) -> bool;
+    /// Returns whether the type has a slice representation,
+    /// that can be obtained by writing &_[..].
+    ///
+    /// These are `SimpleType::QString` and `SimpleType::QByteArray`.
+    fn is_sliceable(&self) -> bool;
+    /// Returns whether the type implements `Copy`.
+    ///
+    /// This is true for all types but `SimpleType::QString`
+    /// and `SimpleType::QByteArray`.
+    fn is_copy(&self) -> bool;
     fn name(&self) -> &str;
     fn cpp_set_type(&self) -> &str;
     fn c_set_type(&self) -> &str;
@@ -28,6 +38,16 @@ pub trait TypePrivate {
 pub trait PropertyPrivate {
     fn is_object(&self) -> bool;
     fn is_complex(&self) -> bool;
+    /// Returns whether the type has a slice representation,
+    /// that can be obtained by writing &_[..].
+    ///
+    /// These are `SimpleType::QString` and `SimpleType::QByteArray`.
+    fn is_sliceable(&self) -> bool;
+    /// Returns whether the type implements `Copy`.
+    ///
+    /// This is true for all types but `SimpleType::QString`
+    /// and `SimpleType::QByteArray`.
+    fn is_copy(&self) -> bool;
     fn c_get_type(&self) -> String;
 }
 
@@ -42,7 +62,7 @@ pub trait SimpleTypePrivate {
     /// that can be obtained by writing &_[..].
     ///
     /// These are `SimpleType::QString` and `SimpleType::QByteArray`.
-    fn is_slicable(&self) -> bool;
+    fn is_sliceable(&self) -> bool;
     /// Returns whether the type implements `Copy`.
     ///
     /// This is true for all types but `SimpleType::QString`
@@ -52,6 +72,16 @@ pub trait SimpleTypePrivate {
 
 pub trait ItemPropertyPrivate {
     fn is_complex(&self) -> bool;
+    /// Returns whether the type has a slice representation,
+    /// that can be obtained by writing &_[..].
+    ///
+    /// These are `SimpleType::QString` and `SimpleType::QByteArray`.
+    fn is_sliceable(&self) -> bool;
+    /// Returns whether the type implements `Copy`.
+    ///
+    /// This is true for all types but `SimpleType::QString`
+    /// and `SimpleType::QByteArray`.
+    fn is_copy(&self) -> bool;
     fn cpp_set_type(&self) -> String;
     fn c_get_type(&self) -> String;
     fn c_set_type(&self) -> &str;

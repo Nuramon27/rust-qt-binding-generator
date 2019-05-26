@@ -68,7 +68,7 @@ fn write_header_item_model(h: &mut Vec<u8>, o: &Object) -> Result<()> {
     }
     for (name, ip) in &o.item_properties {
         let r = property_type(ip);
-        let rw = if r == "QVariant" || ip.item_property_type.is_complex() {
+        let rw = if r == "QVariant" || !ip.item_property_type.is_copy() {
             format!("const {}&", r)
         } else {
             r.clone()
@@ -702,7 +702,7 @@ fn write_model_getter_setter(
     }
 
     //setter
-    if r == "QVariant" || ip.is_complex() {
+    if r == "QVariant" || !ip.is_copy() {
         r = format!("const {}&", r);
     }
     if o.object_type == ObjectType::List {
@@ -756,14 +756,20 @@ fn write_model_getter_setter(
             ip.type_name()
         )?;
     } else {
-        let mut val = "value";
-        if ip.is_complex() {
-            if ip.type_name() == "QString" {
-                val = "value.utf16(), value.length()";
-            } else {
-                val = "value.data(), value.length()";
-            }
-        }
+        let val = match ip.item_property_type {
+            SimpleType::QString => "value.utf16(), value.length()",
+            SimpleType::QByteArray => "value.data(), value.length()",
+            SimpleType::QPoint | SimpleType::QPointF => "value.x(), value.y()",
+            SimpleType::QSize | SimpleType::QSizeF => "value.width(), value.height()",
+            SimpleType::QRect | SimpleType::QRectF => "value.x(), value.y(), value.width(), value.height()",
+            SimpleType::QDate => "value.year(), value.month(), value.day()",
+            SimpleType::QTime => "value.hour(), value.minute(), value.second()",
+            SimpleType::QDateTime => concat!(
+                "value.date().year(), value.date().month(), value.date().day(),",
+                "value.time().hour(), value.time().minute(), value.time().second()",
+            ),
+            _ => "value"
+        };
         writeln!(
             w,
             "    set = {}_set_data_{}(m_d{}, {});",

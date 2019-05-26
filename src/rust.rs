@@ -27,7 +27,7 @@ fn rust_return_type(p: &Property) -> String {
     if type_ == "Vec<u8>" {
         type_ = "[u8]".to_string();
     }
-    if p.property_type.is_complex() {
+    if !p.property_type.is_copy() {
         type_ = "&".to_string() + &type_;
     }
     if p.optional {
@@ -44,7 +44,7 @@ fn rust_return_type_(p: &ItemProperty) -> String {
     if type_ == "Vec<u8>" && !p.rust_by_value {
         type_ = "[u8]".to_string();
     }
-    if p.item_property_type.is_complex() && !p.rust_by_value {
+    if !p.item_property_type.is_copy() && !p.rust_by_value {
         type_ = "&".to_string() + &type_;
     }
     if p.optional {
@@ -1478,7 +1478,7 @@ fn write_rust_implementation_object(r: &mut Vec<u8>, o: &Object) -> Result<()> {
             )?;
         } else {
             writeln!(r, "    fn {}(&self) -> {} {{", lc, rust_return_type(p))?;
-            if p.is_complex() {
+            if !p.is_copy() {
                 if p.optional {
                     writeln!(r, "        self.{}.as_ref().map(|p| &p[..])", lc)?;
                 } else {
@@ -1546,13 +1546,13 @@ fn write_rust_implementation_object(r: &mut Vec<u8>, o: &Object) -> Result<()> {
                 lc,
                 rust_return_type_(ip)
             )?;
-            if ip.is_complex() && ip.optional {
+            if !ip.is_copy() && ip.optional {
                 writeln!(
                     r,
                     "        self.list[index].{}.as_ref().map(|v| &v[..])",
                     lc
                 )?;
-            } else if ip.is_complex() {
+            } else if !ip.is_copy() {
                 writeln!(r, "        &self.list[index].{}", lc)?;
             } else {
                 writeln!(r, "        self.list[index].{}", lc)?;

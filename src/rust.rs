@@ -1263,6 +1263,15 @@ where
             "
 
 pub enum QString {{}}
+pub enum QSize {{}}
+pub enum QSizeF {{}}
+pub enum QPoint {{}}
+pub enum QPointF {{}}
+pub enum QRect {{}}
+pub enum QRectF {{}}
+pub enum QDate {{}}
+pub enum QTime {{}}
+pub enum QDateTime {{}}
 
 fn set_string_from_utf16(s: &mut String, str: *const c_ushort, len: c_int) {{
     let utf16 = unsafe {{ slice::from_raw_parts(str, to_usize(len)) }};

@@ -253,13 +253,6 @@ fn write_function_c_decl(
             SimpleType::QDateTime => write!(w, ", int, int, int, int, int, int")?,
             _ => write!(w, ", {}", a.type_name())?,
         }
-        if a.type_name() == "QString" {
-            ;
-        } else if a.type_name() == "QByteArray" {
-            write!(w, ", const char*, int")?;
-        } else {
-            write!(w, ", {}", a.type_name())?;
-        }
     }
     // If the return type is QString or QByteArray, append a pointer to the
     // variable that will be set to the argument list. Also add a setter
@@ -593,25 +586,16 @@ fn write_cpp_object(w: &mut Vec<u8>, o: &Object, conf: &Config) -> Result<()> {
                 arg_list.push_str(&format!(", {}", a.name));
             }
         }
-        if f.return_type.name() == "QString" {
+        if f.return_type.is_complex() {
             writeln!(
                 w,
                 "    {} s;
-    {}(m_d{}, &s, set_qstring);
+    {}(m_d{}, &s, set_{});
     return s;",
                 f.type_name(),
                 base,
-                arg_list
-            )?;
-        } else if f.return_type.name() == "QByteArray" {
-            writeln!(
-                w,
-                "    {} s;
-    {}(m_d{}, &s, set_qbytearray);
-    return s;",
-                f.type_name(),
-                base,
-                arg_list
+                arg_list,
+                f.type_name().to_lowercase()
             )?;
         } else {
             writeln!(w, "    return {}(m_d{});", base, arg_list)?;
@@ -1422,6 +1406,18 @@ pub fn write_header(conf: &Config) -> Result<()> {
 
 #include <QtCore/QObject>
 #include <QtCore/QAbstractItemModel>
+
+#include <QSize>
+#include <QSizeF>
+#include <QPoint>
+#include <QPointF>
+#include <QRect>
+#include <QRectF>
+#include <QPoint>
+#include <QPointF>
+#include <QDate>
+#include <QTime>
+#include <QDateTime>
 ",
         guard
     )?;
